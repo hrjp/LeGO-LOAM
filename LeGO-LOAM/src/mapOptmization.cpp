@@ -728,7 +728,9 @@ public:
             publishGlobalMap();
         }
         // save final point cloud
-        pcl::io::savePCDFileASCII(fileDirectory+"finalCloud.pcd", *globalMapKeyFramesDS);
+        if(globalMapKeyFramesDS->size()>0){
+            pcl::io::savePCDFileASCII(fileDirectory+"finalCloud.pcd", *globalMapKeyFramesDS);
+        }
 
         string cornerMapString = "/tmp/cornerMap.pcd";
         string surfaceMapString = "/tmp/surfaceMap.pcd";
@@ -749,7 +751,7 @@ public:
         downSizeFilterCorner.filter(*cornerMapCloudDS);
         downSizeFilterSurf.setInputCloud(surfaceMapCloud);
         downSizeFilterSurf.filter(*surfaceMapCloudDS);
-
+        //cout<<"SAVE PCD"<<endl;
         pcl::io::savePCDFileASCII(fileDirectory+"cornerMap.pcd", *cornerMapCloudDS);
         pcl::io::savePCDFileASCII(fileDirectory+"surfaceMap.pcd", *surfaceMapCloudDS);
         pcl::io::savePCDFileASCII(fileDirectory+"trajectory.pcd", *cloudKeyPoses3D);
@@ -1517,8 +1519,11 @@ public:
                 publishKeyPosesAndFrames();
 
                 clearCloud();
+                
+                
             }
         }
+        //cout<<globalMapKeyFramesDS->size()<<endl;
     }
 };
 
@@ -1540,7 +1545,7 @@ int main(int argc, char** argv)
         ros::spinOnce();
 
         MO.run();
-
+        
         rate.sleep();
     }
 
