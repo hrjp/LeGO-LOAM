@@ -44,7 +44,20 @@
 
 #include <gtsam/nonlinear/ISAM2.h>
 
+
+#include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud_conversion.h>
+#include <tf/transform_listener.h>
+#include <sensor_msgs/PointCloud.h>
+
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+
 using namespace gtsam;
+
+std::string filename;
 
 class mapOptimization{
 
@@ -218,6 +231,33 @@ private:
 
     float cRoll, sRoll, cPitch, sPitch, cYaw, sYaw, tX, tY, tZ;
     float ctRoll, stRoll, ctPitch, stPitch, ctYaw, stYaw, tInX, tInY, tInZ;
+
+    tf::TransformListener _tflistener;
+
+    std::string nowDay(){
+        time_t t = time(nullptr);
+        //change format
+        const tm* lt = localtime(&t);
+
+        //sに独自フォーマットになるように連結していく
+        std::stringstream s;
+        s<<"20";
+        s<<lt->tm_year-100; //100を引くことで20xxのxxの部分になる
+        s<<"-";
+        s<<lt->tm_mon+1; //月を0からカウントしているため
+        s<<"-";
+        s<<lt->tm_mday;
+        s<<"-";
+        s<<lt->tm_hour;
+        s<<"-";
+        s<<lt->tm_min;
+        //s<<"-";
+        //s<<lt->tm_sec;
+        std::string result = s.str();
+
+        return result;
+}   
+
 
 public:
 
@@ -729,9 +769,33 @@ public:
         }
         // save final point cloud
         if(globalMapKeyFramesDS->size()>0){
-            pcl::io::savePCDFileASCII(fileDirectory+"finalCloud.pcd", *globalMapKeyFramesDS);
-        }
+            //transform camera_init->map
+            sensor_msgs::PointCloud2 cloudMsgTemp;
+            sensor_msgs::PointCloud pc1_in;
+	        sensor_msgs::PointCloud pc1_trans;
+            sensor_msgs::PointCloud2 pc2_trans;
 
+            pcl::toROSMsg(*globalMapKeyFramesDS, cloudMsgTemp);
+            cloudMsgTemp.header.stamp = ros::Time().fromSec(timeLaserOdometry);
+            cloudMsgTemp.header.frame_id = "/camera_init";
+            sensor_msgs::convertPointCloud2ToPointCloud(cloudMsgTemp, pc1_in);
+            try{
+                _tflistener.waitForTransform("/map", cloudMsgTemp.header.frame_id, cloudMsgTemp.header.stamp, ros::Duration(1.0));
+                _tflistener.transformPointCloud("/map", cloudMsgTemp.header.stamp, pc1_in, cloudMsgTemp.header.frame_id, pc1_trans);
+                sensor_msgs::convertPointCloudToPointCloud2(pc1_trans, pc2_trans);
+                pcl::fromROSMsg(pc2_trans,*globalMapKeyFramesDS);
+                pcl::io::savePCDFileASCII(filename+"PointCloudMap"+nowDay()+".pcd", *globalMapKeyFramesDS);
+	        }
+            catch(tf::TransformException ex){
+                ROS_ERROR("%s",ex.what());
+            }
+
+            
+        }
+        else{
+            ROS_ERROR("No input topics, map save failed");
+        }
+        /*
         string cornerMapString = "/tmp/cornerMap.pcd";
         string surfaceMapString = "/tmp/surfaceMap.pcd";
         string trajectoryString = "/tmp/trajectory.pcd";
@@ -750,11 +814,11 @@ public:
         downSizeFilterCorner.setInputCloud(cornerMapCloud);
         downSizeFilterCorner.filter(*cornerMapCloudDS);
         downSizeFilterSurf.setInputCloud(surfaceMapCloud);
-        downSizeFilterSurf.filter(*surfaceMapCloudDS);
+        downSizeFilterSurf.filter(*surfaceMapCloudDS);*/
         //cout<<"SAVE PCD"<<endl;
-        pcl::io::savePCDFileASCII(fileDirectory+"cornerMap.pcd", *cornerMapCloudDS);
-        pcl::io::savePCDFileASCII(fileDirectory+"surfaceMap.pcd", *surfaceMapCloudDS);
-        pcl::io::savePCDFileASCII(fileDirectory+"trajectory.pcd", *cloudKeyPoses3D);
+        //pcl::io::savePCDFileASCII(fileDirectory+"cornerMap.pcd", *cornerMapCloudDS);
+        //pcl::io::savePCDFileASCII(fileDirectory+"surfaceMap.pcd", *surfaceMapCloudDS);
+        //pcl::io::savePCDFileASCII(fileDirectory+"trajectory.pcd", *cloudKeyPoses3D);
     }
 
     void publishGlobalMap(){
@@ -778,6 +842,8 @@ public:
 	    // downsample near selected key frames
         downSizeFilterGlobalMapKeyPoses.setInputCloud(globalMapKeyPoses);
         downSizeFilterGlobalMapKeyPoses.filter(*globalMapKeyPosesDS);
+        globalMapKeyFrames->clear();
+        globalMapKeyFramesDS->clear();     
 	    // extract visualized and downsampled key frames
         for (int i = 0; i < globalMapKeyPosesDS->points.size(); ++i){
 			int thisKeyInd = (int)globalMapKeyPosesDS->points[i].intensity;
@@ -794,10 +860,10 @@ public:
         cloudMsgTemp.header.stamp = ros::Time().fromSec(timeLaserOdometry);
         cloudMsgTemp.header.frame_id = "/camera_init";
         pubLaserCloudSurround.publish(cloudMsgTemp);  
-
+        ROS_INFO("Global Map %d points",globalMapKeyFrames->size());
         globalMapKeyPoses->clear();
         globalMapKeyPosesDS->clear();
-        globalMapKeyFrames->clear();
+        //globalMapKeyFrames->clear();
         // globalMapKeyFramesDS->clear();     
     }
 
@@ -1523,7 +1589,6 @@ public:
                 
             }
         }
-        //cout<<globalMapKeyFramesDS->size()<<endl;
     }
 };
 
@@ -1533,6 +1598,11 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "lego_loam");
 
     ROS_INFO("\033[1;32m---->\033[0m Map Optimization Started.");
+
+    //param setting
+    ros::NodeHandle pn("~");
+    //ウェイポイントファイルのロード
+    pn.getParam("pcd_file_path",filename);
 
     mapOptimization MO;
 
