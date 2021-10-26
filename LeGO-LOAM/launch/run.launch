@@ -1,10 +1,15 @@
 <launch>
     
+    <arg name="pcd_file_path" default="$(find lego_loam)/pcd/"/>
+    <!--<arg name="pcd_file_path" default="$(find kcctcore)/cofig/pcd/"/>-->
+
+    
+
     <!--- Sim Time -->
     <param name="/use_sim_time" value="true" />
 
     <!--- Run Rviz-->
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find lego_loam)/launch/test.rviz" />
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find lego_loam)/launch/test.rviz" respawn="true" />
 
     <!--- TF -->
     <node pkg="tf" type="static_transform_publisher" name="camera_init_to_map"  args="0 0 0 1.570795   0        1.570795 /map    /camera_init 10" />
@@ -13,7 +18,9 @@
     <!--- LeGO-LOAM -->    
     <node pkg="lego_loam" type="imageProjection"    name="imageProjection"    output="screen"/>
     <node pkg="lego_loam" type="featureAssociation" name="featureAssociation" output="screen"/>
-    <node pkg="lego_loam" type="mapOptmization"     name="mapOptmization"     output="screen"/>
+    <node pkg="lego_loam" type="mapOptmization"     name="mapOptmization"     output="screen">
+        <param name="pcd_file_path" value="$(arg pcd_file_path)"/>
+    </node>
     <node pkg="lego_loam" type="transformFusion"    name="transformFusion"    output="screen"/>
 
 </launch>
