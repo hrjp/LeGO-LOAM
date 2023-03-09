@@ -5,6 +5,7 @@ on:
   schedule:
     - cron: 0 0 * * *
   pull_request:
+  push:
 jobs:
   job1:
     name: BuildTest
