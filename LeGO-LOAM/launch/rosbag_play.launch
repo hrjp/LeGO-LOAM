@@ -1,9 +1,15 @@
 <?xml version="1.0"?>
 <launch>
+    <!-- 地図作成に使用するrosbagのファイルパスを指定 -->
     <arg name="bag_file" default="/home/share/rosbag/nakanoshima211023_mapping.bag" />
+    <!-- rosbagの再生速度 -->
     <arg name="playback_speed" default="5.0" />
+    <!-- 入力する点群のトピック名 -->
+    <arg name="pointcloud_topic" default="/velodyne_points" />
 
     <param name="/use_sim_time" value="true" />
     <include file="$(find lego_loam)/launch/run.launch"/>
-    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bag_file) -r $(arg playback_speed) --clock --topic /velodyne_points /initialpose"/>
+    <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg bag_file) -r $(arg playback_speed) --clock --topic $(arg pointcloud_topic) /initialpose">
+        <remap from="$(arg pointcloud_topic)" to="/velodyne_points" />
+    </node>
 </launch>
