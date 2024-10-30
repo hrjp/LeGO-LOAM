@@ -34,8 +34,8 @@
   <run_depend>std_msgs</run_depend>
   <build_depend>cloud_msgs</build_depend>
   <run_depend>cloud_msgs</run_depend>
-  <build_depend>sensors_msgs</build_depend>
-  <run_depend>sensors_msgs</run_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <run_depend>sensor_msgs</run_depend>
   <build_depend>geometry_msgs</build_depend>
   <run_depend>geometry_msgs</run_depend>
   <build_depend>nav_msgs</build_depend>
