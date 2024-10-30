@@ -7,7 +7,8 @@ LiDARのみのデータから3次元点群地図を作るパッケージ
 ```bash
 cd catkin_ws/src
 git clone https://github.com/hrjp/LeGO-LOAM.git
-./LeGO-LOAM/gtsam_install.bash
+sudo apt update
+rosdep install -i -y --from-paths .
 cd ..
 catkin build
 source devel/setup.bash

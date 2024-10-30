@@ -32,10 +32,7 @@ jobs:
           apt update
           rosdep update
           rosdep install -iry --from-paths src --rosdistro ${{ matrix.rosdistro }}
-      - name: gtsam install
-        run: |
-          cd /home/catkin_ws/src/${{ env.REPOSITORY_NAME }}
-          ./gtsam_install.bash
+          
       - name: Build packages
         run: |
           cd /home/catkin_ws
